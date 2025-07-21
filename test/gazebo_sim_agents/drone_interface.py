@@ -3,6 +3,7 @@
 
 import asyncio
 from mavsdk import System
+from mavsdk.action import OrbitYawBehavior
 
 class DroneInterface:
     """A wrapper class for MAVSDK to simplify drone control."""
@@ -73,6 +74,41 @@ class DroneInterface:
             return False
         print(f"--- Flying to {latitude_deg}, {longitude_deg} at {altitude_m}m...")
         await self.drone.action.goto_location(latitude_deg, longitude_deg, altitude_m, yaw_deg)
+        await asyncio.sleep(10)
+        return True
+
+    async def do_orbit(self, radius_m: float, velocity_ms: float):
+        """
+        Commands the drone to fly in a circle around its current position.
+        """
+        if not self.is_connected:
+            print("--- Drone note connected. Cannot orbit.")
+            return False
+        
+        position = await anext(self.drone.telemetry.position())
+        altitude = position.absolute_altitude_m
+
+        print(f"--- Orbiting at current location with radius {radius_m}m...")
+        await self.drone.action.do_orbit(
+            radius_m=radius_m,
+            velocity_ms=velocity_ms,
+            yaw_behavior=OrbitYawBehavior.HOLD_FRONT_TANGENT_TO_CIRCLE,
+            latitude_deg=position.latitude_deg,
+            longitude_deg=position.longitude_deg,
+            absolute_altitude_m=altitude
+        )
+        await asyncio.sleep(15)
+        return True
+    
+    async def return_to_launch(self):
+        """
+        Commands the drone to return to its takeoff location and land.
+        """
+        if not self.is_connected:
+            print("--- Drone not connected. Cannot return to launch.")
+            return False
+        print("--- Returning to launch location...")
+        await self.drone.action.return_to_launch()
         return True
 
     async def get_telemetry(self):

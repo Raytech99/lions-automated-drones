@@ -110,6 +110,16 @@ class DroneInterface:
         print("--- Returning to launch location...")
         await self.drone.action.return_to_launch()
         return True
+    
+    async def is_armed(self) -> bool:
+        """Checks if drone is armed"""
+        async for is_armed in self.drone.telemetry.armed():
+            return is_armed
+        
+    async def is_in_air(self) -> bool:
+        """Checks if the drone is in the air."""
+        async for in_air in self.drone.telemetry.in_air():
+            return in_air
 
     async def get_telemetry(self):
         """

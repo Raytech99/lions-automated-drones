@@ -1,8 +1,11 @@
 # agent_pilot.py
 # The main script that runs the agent and its tools to control the simulated drone.
 
+#ON LINE 142 CHANGE THE IP ADDRESS TO YOU HOST MACHINE TO CONNECT TO OLLAMA SERVER (will make a ENV file to fix this in the future)
+
 import asyncio
 import threading
+import time
 from smolagents import CodeAgent
 from smolagents.models import OpenAIServerModel
 from smolagents.tools import tool
@@ -102,12 +105,6 @@ def fly_in_a_circle(radius: float, velocity: float) -> str:
     success = run_async_tool(drone_ctrl.do_orbit(radius, velocity))
     return "Orbit complete." if success else "Orbit failed."
 
-# @tool
-# def land_drone() -> str:
-#     """Commands the drone to land."""
-#     return run_async_tool(drone_ctrl.land())
-
-# Testing new land tool
 @tool
 def return_to_home_and_land() -> str:
     """Commands the drone to fly back to its launch point and land."""
@@ -120,6 +117,24 @@ def get_drone_telemetry() -> str:
     data = run_async_tool(drone_ctrl.get_telemetry())
     return str(data) if data else "Could not retrieve telemetry."
 
+tool
+def is_drone_armed() -> bool:
+    """
+    Checks if the drone's motors are armed. Returns True if armed, False otherwise.
+    """
+    return run_async_tool(drone_ctrl.is_armed())
+
+@tool
+def wait_for_seconds(seconds: float) -> str:
+    """
+    Pauses the mission for a specified number of seconds. Use this to hover.
+
+    Args:
+        seconds (float): The number of seconds to wait.
+    """
+    print(f"--- Waiting for {seconds} seconds... ---")
+    time.sleep(seconds)
+    return f"Waited for {seconds} seconds."
 
 class DronePilotAgent:
     def __init__(self):
@@ -137,7 +152,8 @@ class DronePilotAgent:
                 fly_to_gps_location,
                 fly_in_a_circle,
                 return_to_home_and_land,
-                get_drone_telemetry
+                get_drone_telemetry,
+                wait_for_seconds
             ],
             model=ollama_model,
             add_base_tools=True
@@ -157,9 +173,10 @@ def main():
     print("Type 'quit' or 'exit' to close.\n")
 
     try:
-        # We now accept one mission and execute it.
-        prompt = input("Enter your mission: ")
-        if prompt.lower() not in ["quit", "exit"]:
+        while True:
+            prompt = input("Enter your mission: ")
+            if prompt.lower() in ["quit", "exit"]:
+                break
             pilot.run_mission(prompt)
     except (KeyboardInterrupt, EOFError):
         pass
